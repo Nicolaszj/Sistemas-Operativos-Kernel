@@ -1,0 +1,11 @@
+# archivos comunes
+.DS_Store
+.vscode/
+.idea/
+
+# Rust
+/target/
+/**/*.rs.bk
+
+# Logs
+*.log
