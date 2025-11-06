@@ -1,0 +1,50 @@
+# Script de Prueba - Planificación de Disco SSTF y SCAN
+# Formato: Secuencia de cilindros solicitados
+# Posición inicial del cabezal: 50
+
+# Misma secuencia que FCFS para comparar
+CYLINDERS: 98,183,37,122,14,124,65,67
+START_POSITION: 50
+
+# ==========================================
+# SSTF (Shortest Seek Time First)
+# ==========================================
+# Recorrido SSTF (siempre elige el más cercano):
+# 50 → 65  : movimiento = 15  (más cercano)
+# 65 → 67  : movimiento = 2
+# 67 → 37  : movimiento = 30
+# 37 → 14  : movimiento = 23
+# 14 → 98  : movimiento = 84
+# 98 → 122 : movimiento = 24
+# 122 → 124: movimiento = 2
+# 124 → 183: movimiento = 59
+
+# Movimiento total SSTF: 239 cilindros
+# Promedio: 29.9 cilindros por solicitud
+# Mejora vs FCFS: 62.8% menos movimiento
+
+# ==========================================
+# SCAN (Algoritmo del Ascensor)
+# ==========================================
+# Dirección inicial: Hacia arriba (UP)
+# Recorrido SCAN:
+# 50 → 65  : movimiento = 15
+# 65 → 67  : movimiento = 2
+# 67 → 98  : movimiento = 31
+# 98 → 122 : movimiento = 24
+# 122 → 124: movimiento = 2
+# 124 → 183: movimiento = 59
+# (Llega al final, invierte dirección)
+# 183 → 37 : movimiento = 146
+# 37 → 14  : movimiento = 23
+
+# Movimiento total SCAN: 302 cilindros
+# Promedio: 37.8 cilindros por solicitud
+# Mejora vs FCFS: 53.0% menos movimiento
+
+# ==========================================
+# COMPARACIÓN
+# ==========================================
+# FCFS: 643 cilindros (baseline)
+# SSTF: 239 cilindros (mejor, pero puede causar inanición)
+# SCAN: 302 cilindros (buen balance: eficiente + sin inanición)

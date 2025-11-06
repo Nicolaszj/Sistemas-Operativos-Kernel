@@ -1,0 +1,81 @@
+# Script de Prueba - Escenario de Procesos CPU-bound
+# Formato: tiempo_llegada, cpu_burst, memoria_requerida
+
+# Escenario 1: Procesos CPU-bound (sin I/O)
+# Objetivo: Comparar Round Robin vs SJF
+
+# Proceso 1: Largo
+0, 10, 100
+
+# Proceso 2: Corto
+2, 3, 50
+
+# Proceso 3: Medio
+4, 6, 80
+
+# Proceso 4: Muy corto
+5, 1, 40
+
+# Proceso 5: Largo
+6, 12, 120
+
+# ==========================================
+# ANÁLISIS CON ROUND ROBIN (quantum=3)
+# ==========================================
+# Tiempo | CPU  | Evento
+# 0      | P1   | P1 inicia (restante: 10)
+# 3      | P2   | P1 suspendido (restante: 7), P2 inicia
+# 6      | P3   | P2 terminado, P3 inicia (restante: 6)
+# 9      | P4   | P3 suspendido (restante: 3), P4 inicia
+# 10     | P5   | P4 terminado, P5 inicia (restante: 12)
+# 13     | P1   | P5 suspendido (restante: 9), P1 continúa
+# 16     | P3   | P1 suspendido (restante: 4), P3 continúa
+# 19     | P5   | P3 terminado, P5 continúa
+# 22     | P1   | P5 suspendido (restante: 6), P1 continúa
+# 25     | P5   | P1 suspendido (restante: 1), P5 continúa
+# 28     | P1   | P5 suspendido (restante: 3), P1 termina
+# 29     | P5   | P5 termina (restante: 0)
+# 32     | --   | Todos terminados
+
+# Métricas RR (quantum=3):
+# P1: Turnaround=29, Espera=19
+# P2: Turnaround=4,  Espera=1
+# P3: Turnaround=15, Espera=9
+# P4: Turnaround=5,  Espera=4
+# P5: Turnaround=26, Espera=14
+
+# Promedio Espera RR: 9.4
+# Promedio Turnaround RR: 15.8
+
+# ==========================================
+# ANÁLISIS CON SJF (No expropiativo)
+# ==========================================
+# Tiempo | CPU  | Evento
+# 0      | P1   | P1 inicia (burst=10, único proceso)
+# 2      | P1   | P2 llega (burst=3), espera
+# 4      | P1   | P3 llega (burst=6), espera
+# 5      | P1   | P4 llega (burst=1), espera
+# 6      | P1   | P5 llega (burst=12), espera
+# 10     | P4   | P1 termina, P4 más corto (burst=1)
+# 11     | P2   | P4 termina, P2 siguiente (burst=3)
+# 14     | P3   | P2 termina, P3 siguiente (burst=6)
+# 20     | P5   | P3 termina, P5 último (burst=12)
+# 32     | --   | P5 termina
+
+# Métricas SJF:
+# P1: Turnaround=10, Espera=0
+# P2: Turnaround=12, Espera=9
+# P3: Turnaround=16, Espera=10
+# P4: Turnaround=6,  Espera=5
+# P5: Turnaround=26, Espera=14
+
+# Promedio Espera SJF: 7.6 ← MEJOR que RR
+# Promedio Turnaround SJF: 14.0 ← MEJOR que RR
+
+# ==========================================
+# CONCLUSIÓN
+# ==========================================
+# - SJF tiene MEJOR tiempo de espera promedio (óptimo)
+# - RR tiene MEJOR tiempo de respuesta (todos atienden rápido)
+# - SJF puede causar inanición en P5 (llega temprano, ejecuta al final)
+# - RR es más justo (fairness)

@@ -1,0 +1,30 @@
+# Script de Prueba - Memoria FIFO
+# Formato: PID, secuencia de páginas accedidas
+# Parámetros: 4 marcos de memoria
+
+# Proceso 1 - Secuencia clásica que causa anomalía de Belady
+PID: 1
+PAGES: 1,2,3,4,1,2,5,1,2,3,4,5
+FRAMES: 4
+
+# Descripción:
+# Esta secuencia es famosa por demostrar la anomalía de Belady en FIFO
+# Con 3 marcos: 9 fallos
+# Con 4 marcos: 10 fallos (¡más marcos = más fallos!)
+
+# Secuencia de acceso:
+# 1 → Fallo (cargar en marco 0)
+# 2 → Fallo (cargar en marco 1)
+# 3 → Fallo (cargar en marco 2)
+# 4 → Fallo (cargar en marco 3)
+# 1 → Hit (ya está en marco 0)
+# 2 → Hit (ya está en marco 1)
+# 5 → Fallo (reemplazar marco 0, FIFO)
+# 1 → Fallo (reemplazar marco 1)
+# 2 → Fallo (reemplazar marco 2)
+# 3 → Fallo (reemplazar marco 3)
+# 4 → Fallo (reemplazar marco 0)
+# 5 → Hit (ya está en marco 1)
+
+# Total esperado: 9 fallos, 3 hits
+# Tasa de aciertos: 25%

@@ -1,0 +1,27 @@
+# Script de Prueba - Planificación de Disco FCFS
+# Formato: Secuencia de cilindros solicitados
+# Posición inicial del cabezal: 50
+
+# Secuencia clásica de ejemplo
+CYLINDERS: 98,183,37,122,14,124,65,67
+START_POSITION: 50
+
+# Descripción:
+# Esta es la secuencia de ejemplo del libro de Tanenbaum
+# Demuestra el "problema del ascensor" con FCFS
+
+# Recorrido FCFS (orden de llegada):
+# 50 → 98  : movimiento = 48
+# 98 → 183 : movimiento = 85
+# 183 → 37 : movimiento = 146
+# 37 → 122 : movimiento = 85
+# 122 → 14 : movimiento = 108
+# 14 → 124 : movimiento = 110
+# 124 → 65 : movimiento = 59
+# 65 → 67  : movimiento = 2
+
+# Movimiento total: 643 cilindros
+# Promedio: 80.4 cilindros por solicitud
+
+# Nota: El salto 183→37 (146) es muy ineficiente
+# SSTF y SCAN pueden mejorarlo significativamente

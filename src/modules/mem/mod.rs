@@ -1,4 +1,6 @@
-//! Memory manager skeleton (placeholders)
+//! Memory manager with paging support
+
+pub mod paging;
 
 pub struct MemoryManager {}
 

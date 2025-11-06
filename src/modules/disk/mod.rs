@@ -1,4 +1,6 @@
-//! Disk simulation skeleton
+//! Disk simulation with scheduling algorithms
+
+pub mod scheduler;
 
 pub fn read_block(block_id: u64) -> Vec<u8> {
     println!("(disk) lectura bloque {}", block_id);

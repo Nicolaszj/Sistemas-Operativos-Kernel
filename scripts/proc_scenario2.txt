@@ -1,0 +1,61 @@
+# Script de Prueba - Escenario Mixto (CPU + I/O)
+# Formato: tiempo_llegada, cpu_burst, memoria_requerida, io_operations
+
+# Escenario 2: Procesos con I/O intercalado
+# Objetivo: Demostrar bloqueo y reanudación
+
+# Proceso 1: CPU-bound
+0, 8, 100, []
+
+# Proceso 2: I/O-bound (muchas operaciones I/O)
+1, 5, 60, [2,4]
+
+# Proceso 3: Mixto
+3, 7, 80, [3]
+
+# Proceso 4: CPU-bound corto
+4, 2, 40, []
+
+# ==========================================
+# DESCRIPCIÓN
+# ==========================================
+# P1: 8 unidades de CPU pura
+# P2: 5 unidades de CPU, pero hace I/O en tiempos 2 y 4
+# P3: 7 unidades de CPU, I/O en tiempo 3
+# P4: 2 unidades de CPU pura
+
+# Con I/O:
+# - Cuando proceso hace I/O, pasa a estado BLOCKED
+# - Otro proceso toma la CPU
+# - Después de N ciclos, proceso vuelve a READY
+
+# Esto es más realista que escenario 1 (solo CPU)
+
+# ==========================================
+# ANÁLISIS CON ROUND ROBIN (quantum=3)
+# ==========================================
+# Tiempo | CPU  | Evento
+# 0      | P1   | P1 inicia
+# 1      | P1   | P2 llega, espera
+# 3      | P2   | P1 suspendido (Q agotado), P2 inicia, P3 llega
+# 4      | P2   | P4 llega
+# 5      | P2   | P2 hace I/O → BLOCKED
+# 5      | P3   | P3 toma CPU
+# 8      | P4   | P3 hace I/O → BLOCKED, P4 toma CPU
+# 10     | P1   | P4 terminado, P1 continúa
+# 13     | P2   | P1 suspendido, P2 despierta de I/O
+# ...
+
+# Este escenario demuestra:
+# 1. Multiprogramación (CPU no está ociosa)
+# 2. Estados de proceso (Ready, Running, Blocked)
+# 3. Colas de espera y bloqueo
+# 4. Throughput mejorado vs CPU-only
+
+# ==========================================
+# MÉTRICAS ESPERADAS
+# ==========================================
+# Utilización de CPU: ~95% (vs 100% sin I/O)
+# Throughput: Mejor que escenario 1 (más procesos terminan antes)
+# Tiempo de respuesta: Similar a escenario 1
+# Tiempo de espera: Puede aumentar ligeramente por bloqueos

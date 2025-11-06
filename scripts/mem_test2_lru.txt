@@ -1,0 +1,30 @@
+# Script de Prueba - Memoria LRU
+# Formato: PID, secuencia de páginas accedidas
+# Parámetros: 4 marcos de memoria
+
+# Proceso 1 - Secuencia con localidad temporal
+PID: 1
+PAGES: 1,2,3,4,1,2,1,2,1,2,3,5
+FRAMES: 4
+
+# Descripción:
+# Esta secuencia tiene buena localidad temporal (1,2 se repiten)
+# LRU debería tener mejor rendimiento que FIFO aquí
+
+# Secuencia esperada con LRU:
+# 1 → Fallo (marco 0)
+# 2 → Fallo (marco 1)
+# 3 → Fallo (marco 2)
+# 4 → Fallo (marco 3)
+# 1 → Hit (actualizar timestamp)
+# 2 → Hit (actualizar timestamp)
+# 1 → Hit
+# 2 → Hit
+# 1 → Hit
+# 2 → Hit
+# 3 → Hit
+# 5 → Fallo (reemplazar 4, es el LRU)
+
+# Total esperado: 5 fallos, 7 hits
+# Tasa de aciertos: 58.3%
+# (FIFO tendría más fallos aquí)
