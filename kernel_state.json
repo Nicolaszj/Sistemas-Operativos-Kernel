@@ -1,42 +1,53 @@
 {
   "processes": {
+    "2": {
+      "pid": 2,
+      "state": "Ready",
+      "cpu_burst": 15,
+      "remaining_burst": 14,
+      "memory_req": 8,
+      "arrival_time": 0,
+      "start_time": 2,
+      "finish_time": null,
+      "io_operations": []
+    },
+    "4": {
+      "pid": 4,
+      "state": "Ready",
+      "cpu_burst": 20,
+      "remaining_burst": 19,
+      "memory_req": 10,
+      "arrival_time": 0,
+      "start_time": 3,
+      "finish_time": null,
+      "io_operations": []
+    },
     "1": {
       "pid": 1,
       "state": "Ready",
-      "cpu_burst": 20,
-      "remaining_burst": 15,
-      "memory_req": 150,
+      "cpu_burst": 10,
+      "remaining_burst": 8,
+      "memory_req": 5,
       "arrival_time": 0,
-      "start_time": 2,
+      "start_time": 1,
       "finish_time": null,
       "io_operations": []
     },
     "3": {
       "pid": 3,
       "state": "Ready",
-      "cpu_burst": 10,
-      "remaining_burst": 4,
-      "memory_req": 80,
+      "cpu_burst": 8,
+      "remaining_burst": 7,
+      "memory_req": 6,
       "arrival_time": 0,
-      "start_time": 1,
-      "finish_time": null,
-      "io_operations": []
-    },
-    "2": {
-      "pid": 2,
-      "state": "Ready",
-      "cpu_burst": 15,
-      "remaining_burst": 11,
-      "memory_req": 100,
-      "arrival_time": 0,
-      "start_time": 3,
+      "start_time": 4,
       "finish_time": null,
       "io_operations": []
     }
   },
-  "next_pid": 4,
+  "next_pid": 5,
   "scheduler_type": {
-    "RoundRobin": 4
+    "RoundRobin": 3
   },
   "current_process": null,
   "memory_manager": {
@@ -44,72 +55,111 @@
       {
         "frame_num": 0,
         "pid": 1,
-        "page_num": 1,
+        "page_num": 0,
         "load_time": 1
       },
       {
         "frame_num": 1,
         "pid": 1,
-        "page_num": 2,
+        "page_num": 1,
         "load_time": 2
       },
       {
         "frame_num": 2,
         "pid": 1,
-        "page_num": 5,
-        "load_time": 7
+        "page_num": 2,
+        "load_time": 3
       },
       {
         "frame_num": 3,
         "pid": 1,
         "page_num": 3,
-        "load_time": 10
+        "load_time": 4
+      },
+      {
+        "frame_num": 4,
+        "pid": 2,
+        "page_num": 0,
+        "load_time": 5
+      },
+      {
+        "frame_num": 5,
+        "pid": 2,
+        "page_num": 1,
+        "load_time": 6
+      },
+      {
+        "frame_num": 6,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 7,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
       }
     ],
-    "fifo_queue": [],
+    "fifo_queue": [
+      0,
+      1,
+      2,
+      3
+    ],
     "page_tables": {
-      "3": {
-        "pid": 3,
-        "entries": {}
-      },
-      "1": {
-        "pid": 1,
+      "2": {
+        "pid": 2,
         "entries": {
           "1": {
-            "frame_number": 0,
+            "frame_number": 5,
             "valid": true,
-            "last_access": 8
-          },
-          "3": {
-            "frame_number": 3,
-            "valid": true,
-            "last_access": 10
-          },
-          "4": {
-            "frame_number": null,
-            "valid": false,
             "last_access": 6
           },
-          "2": {
-            "frame_number": 1,
-            "valid": true,
-            "last_access": 9
-          },
-          "5": {
-            "frame_number": 2,
+          "0": {
+            "frame_number": 4,
             "valid": true,
             "last_access": 7
           }
         }
       },
-      "2": {
-        "pid": 2,
+      "1": {
+        "pid": 1,
+        "entries": {
+          "0": {
+            "frame_number": 0,
+            "valid": true,
+            "last_access": 1
+          },
+          "2": {
+            "frame_number": 2,
+            "valid": true,
+            "last_access": 3
+          },
+          "3": {
+            "frame_number": 3,
+            "valid": true,
+            "last_access": 4
+          },
+          "1": {
+            "frame_number": 1,
+            "valid": true,
+            "last_access": 2
+          }
+        }
+      },
+      "4": {
+        "pid": 4,
+        "entries": {}
+      },
+      "3": {
+        "pid": 3,
         "entries": {}
       }
     },
     "page_faults": 6,
-    "page_hits": 4,
-    "current_time": 10
+    "page_hits": 1,
+    "current_time": 7
   },
   "heap_allocator": {
     "total_size": 4096,
@@ -117,18 +167,69 @@
     "blocks": [
       {
         "address": 0,
-        "size": 4096,
+        "size": 128,
+        "state": "Free",
+        "pid": null
+      },
+      {
+        "address": 128,
+        "size": 128,
+        "state": "Allocated",
+        "pid": 2
+      },
+      {
+        "address": 256,
+        "size": 128,
+        "state": "Allocated",
+        "pid": 3
+      },
+      {
+        "address": 384,
+        "size": 128,
+        "state": "Free",
+        "pid": null
+      },
+      {
+        "address": 512,
+        "size": 512,
+        "state": "Free",
+        "pid": null
+      },
+      {
+        "address": 1024,
+        "size": 1024,
+        "state": "Free",
+        "pid": null
+      },
+      {
+        "address": 2048,
+        "size": 2048,
         "state": "Free",
         "pid": null
       }
     ],
-    "allocated_blocks": {},
-    "total_allocations": 0,
-    "total_deallocations": 0,
-    "internal_fragmentation": 0
+    "allocated_blocks": {
+      "256": {
+        "address": 256,
+        "size": 128,
+        "state": "Allocated",
+        "pid": 3
+      },
+      "128": {
+        "address": 128,
+        "size": 128,
+        "state": "Allocated",
+        "pid": 2
+      }
+    },
+    "total_allocations": 3,
+    "total_deallocations": 1,
+    "internal_fragmentation": 32
   },
   "producer_consumer": {
-    "buffer": [],
+    "buffer": [
+      "Dato2"
+    ],
     "capacity": 5,
     "mutex": {
       "count": 1,
@@ -136,18 +237,18 @@
       "name": "mutex"
     },
     "empty": {
-      "count": 5,
+      "count": 4,
       "waiting_queue": [],
       "name": "empty"
     },
     "full": {
-      "count": 0,
+      "count": 1,
       "waiting_queue": [],
       "name": "full"
     },
-    "total_produced": 0,
-    "total_consumed": 0
+    "total_produced": 2,
+    "total_consumed": 1
   },
-  "current_time": 15,
+  "current_time": 5,
   "finished_processes": []
 }
