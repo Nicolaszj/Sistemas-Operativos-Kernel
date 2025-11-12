@@ -323,6 +323,70 @@ impl FrameManager {
         self.page_faults = 0;
         self.page_hits = 0;
     }
+
+    /// Acceder a una página con Working Set
+    /// Mantiene las páginas accedidas en una ventana de tiempo Δ
+    pub fn access_page_working_set(&mut self, pid: u32, page_num: usize, window_size: usize) -> Result<usize, String> {
+        self.current_time += 1;
+
+        if !self.page_tables.contains_key(&pid) {
+            self.create_page_table(pid);
+        }
+
+        let page_table = self.page_tables.get_mut(&pid).unwrap();
+        
+        if let Some(frame_num) = page_table.access(page_num, self.current_time) {
+            // HIT
+            self.page_hits += 1;
+            return Ok(frame_num);
+        }
+
+        // MISS
+        self.page_faults += 1;
+
+        // Buscar marco libre
+        if let Some(free_idx) = self.frames.iter().position(|f| f.pid.is_none()) {
+            self.allocate_frame_lru(free_idx, pid, page_num);
+            return Ok(free_idx);
+        }
+
+        // Reemplazar usando Working Set: página no accedida en ventana Δ
+        let victim_idx = self.find_working_set_victim(window_size);
+        self.replace_frame_lru(victim_idx, pid, page_num);
+        Ok(victim_idx)
+    }
+
+    /// Encontrar víctima según Working Set
+    /// Una página está fuera del working set si no fue accedida en las últimas Δ referencias
+    fn find_working_set_victim(&self, window_size: usize) -> usize {
+        let threshold = self.current_time.saturating_sub(window_size as u64);
+        let mut oldest_time = u64::MAX;
+        let mut victim_idx = 0;
+
+        for (idx, frame) in self.frames.iter().enumerate() {
+            if let Some(pid) = frame.pid {
+                if let Some(page_num) = frame.page_num {
+                    if let Some(table) = self.page_tables.get(&pid) {
+                        if let Some(entry) = table.entries.get(&page_num) {
+                            // Si la página no fue accedida recientemente, es candidata
+                            if entry.last_access < threshold {
+                                if entry.last_access < oldest_time {
+                                    oldest_time = entry.last_access;
+                                    victim_idx = idx;
+                                }
+                            } else if entry.last_access < oldest_time {
+                                // Si no hay páginas fuera de la ventana, usar LRU
+                                oldest_time = entry.last_access;
+                                victim_idx = idx;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        victim_idx
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -342,16 +406,17 @@ mod tests {
         let mut fm = FrameManager::new(3);
         fm.create_page_table(1);
 
-        // Secuencia de accesos que causa reemplazo
-        let pages = vec![1, 2, 3, 4, 1, 2, 5];
+        // Secuencia que garantiza hits: 1 2 3 1 2 4
+        let pages = vec![1, 2, 3, 1, 2, 4];
         
         for page in pages {
             let _ = fm.access_page_fifo(1, page);
         }
 
         let stats = fm.stats();
-        assert!(stats.page_faults > 0);
-        assert!(stats.page_hits > 0);
+        assert!(stats.page_faults > 0); // Debe haber fallos
+        assert!(stats.page_hits >= 2);  // Mínimo 2 hits (páginas 1 y 2 repetidas)
+        assert_eq!(stats.total_accesses, 6);
     }
 
     #[test]
@@ -367,5 +432,24 @@ mod tests {
 
         let stats = fm.stats();
         assert!(stats.page_faults > 0);
+    }
+
+    #[test]
+    fn test_working_set_replacement() {
+        let mut fm = FrameManager::new(3);
+        fm.create_page_table(1);
+
+        // Secuencia con localidad temporal
+        let pages = vec![1, 2, 3, 1, 2, 4, 1, 2, 3, 4];
+        let window_size = 5; // Ventana de 5 referencias
+        
+        for page in pages {
+            let _ = fm.access_page_working_set(1, page, window_size);
+        }
+
+        let stats = fm.stats();
+        assert!(stats.page_faults > 0);
+        assert!(stats.page_hits > 0);
+        // Working Set debería tener mejor rendimiento que FIFO en esta secuencia
     }
 }

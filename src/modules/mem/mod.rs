@@ -1,6 +1,7 @@
 //! Memory manager with paging support
 
 pub mod paging;
+pub mod buddy;
 
 pub struct MemoryManager {}
 

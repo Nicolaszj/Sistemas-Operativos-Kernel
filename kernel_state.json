@@ -1,6 +1,40 @@
 {
-  "processes": {},
-  "next_pid": 1,
+  "processes": {
+    "1": {
+      "pid": 1,
+      "state": "Ready",
+      "cpu_burst": 20,
+      "remaining_burst": 15,
+      "memory_req": 150,
+      "arrival_time": 0,
+      "start_time": 2,
+      "finish_time": null,
+      "io_operations": []
+    },
+    "3": {
+      "pid": 3,
+      "state": "Ready",
+      "cpu_burst": 10,
+      "remaining_burst": 4,
+      "memory_req": 80,
+      "arrival_time": 0,
+      "start_time": 1,
+      "finish_time": null,
+      "io_operations": []
+    },
+    "2": {
+      "pid": 2,
+      "state": "Ready",
+      "cpu_burst": 15,
+      "remaining_burst": 11,
+      "memory_req": 100,
+      "arrival_time": 0,
+      "start_time": 3,
+      "finish_time": null,
+      "io_operations": []
+    }
+  },
+  "next_pid": 4,
   "scheduler_type": {
     "RoundRobin": 4
   },
@@ -9,65 +43,92 @@
     "frames": [
       {
         "frame_num": 0,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
+        "pid": 1,
+        "page_num": 1,
+        "load_time": 1
       },
       {
         "frame_num": 1,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
+        "pid": 1,
+        "page_num": 2,
+        "load_time": 2
       },
       {
         "frame_num": 2,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
+        "pid": 1,
+        "page_num": 5,
+        "load_time": 7
       },
       {
         "frame_num": 3,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
-      },
-      {
-        "frame_num": 4,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
-      },
-      {
-        "frame_num": 5,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
-      },
-      {
-        "frame_num": 6,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
-      },
-      {
-        "frame_num": 7,
-        "pid": null,
-        "page_num": null,
-        "load_time": 0
+        "pid": 1,
+        "page_num": 3,
+        "load_time": 10
       }
     ],
     "fifo_queue": [],
-    "page_tables": {},
-    "page_faults": 0,
-    "page_hits": 0,
-    "current_time": 0
+    "page_tables": {
+      "3": {
+        "pid": 3,
+        "entries": {}
+      },
+      "1": {
+        "pid": 1,
+        "entries": {
+          "1": {
+            "frame_number": 0,
+            "valid": true,
+            "last_access": 8
+          },
+          "3": {
+            "frame_number": 3,
+            "valid": true,
+            "last_access": 10
+          },
+          "4": {
+            "frame_number": null,
+            "valid": false,
+            "last_access": 6
+          },
+          "2": {
+            "frame_number": 1,
+            "valid": true,
+            "last_access": 9
+          },
+          "5": {
+            "frame_number": 2,
+            "valid": true,
+            "last_access": 7
+          }
+        }
+      },
+      "2": {
+        "pid": 2,
+        "entries": {}
+      }
+    },
+    "page_faults": 6,
+    "page_hits": 4,
+    "current_time": 10
+  },
+  "heap_allocator": {
+    "total_size": 4096,
+    "min_block_size": 64,
+    "blocks": [
+      {
+        "address": 0,
+        "size": 4096,
+        "state": "Free",
+        "pid": null
+      }
+    ],
+    "allocated_blocks": {},
+    "total_allocations": 0,
+    "total_deallocations": 0,
+    "internal_fragmentation": 0
   },
   "producer_consumer": {
-    "buffer": [
-      "Item C",
-      "Item D",
-      "Item E"
-    ],
+    "buffer": [],
     "capacity": 5,
     "mutex": {
       "count": 1,
@@ -75,18 +136,18 @@
       "name": "mutex"
     },
     "empty": {
-      "count": 2,
+      "count": 5,
       "waiting_queue": [],
       "name": "empty"
     },
     "full": {
-      "count": 3,
+      "count": 0,
       "waiting_queue": [],
       "name": "full"
     },
-    "total_produced": 5,
-    "total_consumed": 2
+    "total_produced": 0,
+    "total_consumed": 0
   },
-  "current_time": 0,
+  "current_time": 15,
   "finished_processes": []
 }

@@ -56,6 +56,16 @@ enum Commands {
         pid: u32,
     },
 
+    /// Suspender un proceso (bloquearlo)
+    Suspend {
+        pid: u32,
+    },
+
+    /// Reanudar un proceso (desbloquearlo)
+    Resume {
+        pid: u32,
+    },
+
     /// Ejecutar n pasos completos
     Run {
         steps: u64,
@@ -98,8 +108,35 @@ enum Commands {
         pages: Vec<usize>,
     },
 
+    /// Simular acceso a memoria con Working Set
+    MemWs {
+        #[arg(long)]
+        pid: u32,
+        
+        #[arg(short, long, default_value = "10")]
+        window: usize,
+        
+        pages: Vec<usize>,
+    },
+
     /// Mostrar marcos de memoria
     MemDisplay,
+
+    /// Asignar memoria heap (Buddy Allocator)
+    HeapAlloc {
+        #[arg(short, long)]
+        pid: u32,
+        
+        size: usize,
+    },
+
+    /// Liberar memoria heap
+    HeapFree {
+        address: usize,
+    },
+
+    /// Mostrar estado del heap allocator
+    HeapStatus,
 
     /// Simular cena de los filósofos
     Philosophers {
@@ -255,6 +292,34 @@ fn main() -> Result<()> {
             }
         }
 
+        Commands::Suspend { pid } => {
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.suspend_process(pid) {
+                    Ok(_) => {
+                        println!("⏸️  Proceso {} suspendido (bloqueado)", pid);
+                        save_kernel(&kernel)?;
+                    }
+                    Err(e) => eprintln!("❌ Error: {}", e),
+                }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
+            }
+        }
+
+        Commands::Resume { pid } => {
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.resume_process(pid) {
+                    Ok(_) => {
+                        println!("▶️  Proceso {} reanudado", pid);
+                        save_kernel(&kernel)?;
+                    }
+                    Err(e) => eprintln!("❌ Error: {}", e),
+                }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
+            }
+        }
+
         Commands::Run { steps } => {
             if let Some(mut kernel) = load_kernel()? {
                 kernel.run(steps);
@@ -344,9 +409,59 @@ fn main() -> Result<()> {
             }
         }
 
+        Commands::MemWs { pid, window, pages } => {
+            if let Some(mut kernel) = load_kernel()? {
+                println!("\n🔍 Simulando accesos con Working Set para proceso {} (ventana={})", pid, window);
+                for page in pages {
+                    let _ = kernel.access_memory_ws(pid, page, window);
+                }
+                kernel.display_memory();
+                kernel.status();
+                save_kernel(&kernel)?;
+            } else {
+                eprintln!("❌ Kernel no inicializado");
+            }
+        }
+
         Commands::MemDisplay => {
             if let Some(kernel) = load_kernel()? {
                 kernel.display_memory();
+            } else {
+                eprintln!("❌ Kernel no inicializado");
+            }
+        }
+
+        Commands::HeapAlloc { pid, size } => {
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.heap_alloc(pid, size) {
+                    Ok(address) => {
+                        println!("✅ Heap: Asignado {} bytes para proceso {} en dirección {:#x}", size, pid, address);
+                        save_kernel(&kernel)?;
+                    }
+                    Err(e) => eprintln!("❌ Error: {}", e),
+                }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
+            }
+        }
+
+        Commands::HeapFree { address } => {
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.heap_free(address) {
+                    Ok(_) => {
+                        println!("✅ Heap: Liberada memoria en dirección {:#x}", address);
+                        save_kernel(&kernel)?;
+                    }
+                    Err(e) => eprintln!("❌ Error: {}", e),
+                }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
+            }
+        }
+
+        Commands::HeapStatus => {
+            if let Some(kernel) = load_kernel()? {
+                kernel.heap_status();
             } else {
                 eprintln!("❌ Kernel no inicializado");
             }

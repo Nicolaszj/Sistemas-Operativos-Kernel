@@ -6,6 +6,7 @@ use serde::{Serialize, Deserialize};
 use crate::process::{Process, ProcessState};
 use crate::scheduler::{Scheduler, RoundRobinScheduler, SjfScheduler, FifoScheduler};
 use crate::modules::mem::paging::FrameManager;
+use crate::modules::mem::buddy::BuddyAllocator;
 use crate::modules::ipc::sync::ProducerConsumerBuffer;
 
 /// Estado global del kernel
@@ -20,6 +21,7 @@ pub struct KernelState {
 
     current_process: Option<u32>,
     memory_manager: FrameManager,
+    heap_allocator: BuddyAllocator,
     producer_consumer: ProducerConsumerBuffer,
     current_time: u64,
     finished_processes: Vec<Process>,
@@ -39,6 +41,7 @@ impl KernelState {
             scheduler_type,
             current_process: None,
             memory_manager: FrameManager::new(num_frames),
+            heap_allocator: BuddyAllocator::new(4096, 64), // 4KB total, bloques mínimos de 64 bytes
             producer_consumer: ProducerConsumerBuffer::new(5),
             current_time: 0,
             finished_processes: Vec::new(),
@@ -129,6 +132,38 @@ impl KernelState {
             info!("Proceso {} terminado forzosamente", pid);
             self.finished_processes.push(proc);
             Ok(())
+        } else {
+            Err(anyhow::anyhow!("Proceso {} no encontrado", pid))
+        }
+    }
+
+    /// Suspender proceso (bloquearlo)
+    pub fn suspend_process(&mut self, pid: u32) -> Result<()> {
+        if let Some(proc) = self.processes.get_mut(&pid) {
+            if proc.state == ProcessState::Running || proc.state == ProcessState::Ready {
+                proc.state = ProcessState::Blocked;
+                info!("Proceso {} suspendido", pid);
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!("Proceso {} no puede ser suspendido (estado: {:?})", pid, proc.state))
+            }
+        } else {
+            Err(anyhow::anyhow!("Proceso {} no encontrado", pid))
+        }
+    }
+
+    /// Reanudar proceso (desbloquearlo)
+    pub fn resume_process(&mut self, pid: u32) -> Result<()> {
+        if let Some(proc) = self.processes.get_mut(&pid) {
+            if proc.state == ProcessState::Blocked {
+                proc.state = ProcessState::Ready;
+                // Volver a agregarlo al scheduler
+                self.scheduler.push(proc.clone());
+                info!("Proceso {} reanudado", pid);
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!("Proceso {} no está bloqueado (estado: {:?})", pid, proc.state))
+            }
         } else {
             Err(anyhow::anyhow!("Proceso {} no encontrado", pid))
         }
@@ -307,6 +342,48 @@ impl KernelState {
             }
             Err(e) => Err(anyhow::anyhow!(e))
         }
+    }
+
+    /// Simular acceso a memoria con algoritmo Working Set
+    pub fn access_memory_ws(&mut self, pid: u32, page: usize, window: usize) -> Result<()> {
+        match self.memory_manager.access_page_working_set(pid, page, window) {
+            Ok(frame) => {
+                println!("✅ Acceso a página {} del proceso {} → Marco {} (WS ventana={})", page, pid, frame, window);
+                Ok(())
+            }
+            Err(e) => Err(anyhow::anyhow!(e))
+        }
+    }
+
+    /// Asignar memoria heap con Buddy Allocator
+    pub fn heap_alloc(&mut self, pid: u32, size: usize) -> Result<usize> {
+        self.heap_allocator.alloc(pid, size)
+            .map_err(|e| anyhow::anyhow!(e))
+    }
+
+    /// Liberar memoria heap
+    pub fn heap_free(&mut self, address: usize) -> Result<()> {
+        self.heap_allocator.free(address)
+            .map_err(|e| anyhow::anyhow!(e))
+    }
+
+    /// Mostrar estado del heap allocator
+    pub fn heap_status(&self) {
+        self.heap_allocator.display();
+        
+        let stats = self.heap_allocator.stats();
+        println!("\n╔════════════════════════════════════════════════════╗");
+        println!("║         ESTADÍSTICAS DEL HEAP ALLOCATOR           ║");
+        println!("╠════════════════════════════════════════════════════╣");
+        println!("║ Memoria libre:     {} bytes                        ", stats.free_memory);
+        println!("║ Memoria asignada:  {} bytes                        ", stats.allocated_memory);
+        println!("║ Bloques libres:    {}                              ", stats.free_blocks);
+        println!("║ Bloques asignados: {}                              ", stats.allocated_blocks);
+        println!("║ Total asignaciones:   {}                           ", stats.total_allocations);
+        println!("║ Total liberaciones:   {}                           ", stats.total_deallocations);
+        println!("║ Fragmentación interna:  {} bytes                   ", stats.internal_fragmentation);
+        println!("║ Fragmentación externa:  {:.2}%                     ", stats.external_fragmentation);
+        println!("╚════════════════════════════════════════════════════╝");
     }
 }
 
