@@ -1,7 +1,8 @@
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 
 /// Entrada en la tabla de páginas
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageTableEntry {
     pub frame_number: Option<usize>, // None = no está en memoria
     pub valid: bool,
@@ -9,7 +10,7 @@ pub struct PageTableEntry {
 }
 
 /// Tabla de páginas por proceso
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PageTable {
     pub pid: u32,
     entries: HashMap<usize, PageTableEntry>, // page_number -> entry
@@ -69,7 +70,7 @@ impl PageTable {
 }
 
 /// Marco de memoria física
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Frame {
     pub frame_num: usize,
     pub pid: Option<u32>,
@@ -78,9 +79,9 @@ pub struct Frame {
 }
 
 /// Gestor de marcos de memoria con algoritmos de reemplazo
+#[derive(Serialize, Deserialize)]
 pub struct FrameManager {
     frames: Vec<Frame>,
-    total_frames: usize,
     fifo_queue: VecDeque<usize>, // Índices de marcos para FIFO
     page_tables: HashMap<u32, PageTable>,
     
@@ -104,7 +105,6 @@ impl FrameManager {
 
         Self {
             frames,
-            total_frames,
             fifo_queue: VecDeque::new(),
             page_tables: HashMap::new(),
             page_faults: 0,

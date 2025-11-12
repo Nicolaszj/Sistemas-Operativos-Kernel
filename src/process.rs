@@ -54,7 +54,7 @@ impl Process {
     }
 
     /// Calcular tiempo de espera
-    pub fn waiting_time(&self, current_time: u64) -> u64 {
+    pub fn waiting_time(&self, _current_time: u64) -> u64 {
         if let Some(finish) = self.finish_time {
             finish.saturating_sub(self.arrival_time).saturating_sub(self.cpu_burst)
         } else {

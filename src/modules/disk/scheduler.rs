@@ -103,7 +103,6 @@ impl DiskScheduler for SstfScheduler {
 pub struct ScanScheduler {
     requests: Vec<DiskRequest>,
     direction: ScanDirection, // 1 = hacia arriba, -1 = hacia abajo
-    max_cylinder: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -113,11 +112,10 @@ pub enum ScanDirection {
 }
 
 impl ScanScheduler {
-    pub fn new(max_cylinder: usize, initial_direction: ScanDirection) -> Self {
+    pub fn new(initial_direction: ScanDirection) -> Self {
         Self {
             requests: Vec::new(),
             direction: initial_direction,
-            max_cylinder,
         }
     }
 }
@@ -152,7 +150,11 @@ impl DiskScheduler for ScanScheduler {
                 }
                 // Si no hay hacia abajo, cambiar dirección
                 self.direction = ScanDirection::Up;
-                self.requests.first().map(|_| self.requests.remove(0))
+                if self.requests.is_empty() {
+                    None
+                } else {
+                    Some(self.requests.remove(0))
+                }
             }
         }
     }
@@ -258,7 +260,7 @@ impl DiskSimulator {
             println!(" │ {} → {}", from, to);
         }
         
-        println!("└" + &"─".repeat(max_cylinder + 4) + "┘");
+        println!("└{}┘", "─".repeat(max_cylinder + 4));
     }
 
     pub fn total_movement(&self) -> usize {

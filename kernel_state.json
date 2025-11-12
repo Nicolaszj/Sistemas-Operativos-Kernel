@@ -1,0 +1,92 @@
+{
+  "processes": {},
+  "next_pid": 1,
+  "scheduler_type": {
+    "RoundRobin": 4
+  },
+  "current_process": null,
+  "memory_manager": {
+    "frames": [
+      {
+        "frame_num": 0,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 1,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 2,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 3,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 4,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 5,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 6,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      },
+      {
+        "frame_num": 7,
+        "pid": null,
+        "page_num": null,
+        "load_time": 0
+      }
+    ],
+    "fifo_queue": [],
+    "page_tables": {},
+    "page_faults": 0,
+    "page_hits": 0,
+    "current_time": 0
+  },
+  "producer_consumer": {
+    "buffer": [
+      "Item C",
+      "Item D",
+      "Item E"
+    ],
+    "capacity": 5,
+    "mutex": {
+      "count": 1,
+      "waiting_queue": [],
+      "name": "mutex"
+    },
+    "empty": {
+      "count": 2,
+      "waiting_queue": [],
+      "name": "empty"
+    },
+    "full": {
+      "count": 3,
+      "waiting_queue": [],
+      "name": "full"
+    },
+    "total_produced": 5,
+    "total_consumed": 2
+  },
+  "current_time": 0,
+  "finished_processes": []
+}

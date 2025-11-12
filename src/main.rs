@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use anyhow::Result;
 use kernel_sim::kernel::{KernelState, SchedulerType};
+use std::fs;
 use kernel_sim::modules::ipc::philosophers::DiningPhilosophers;
 use kernel_sim::modules::disk::scheduler::{
     FcfsScheduler, SstfScheduler, ScanScheduler, ScanDirection, 
@@ -17,6 +18,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Borrar el estado del kernel y empezar de nuevo
+    Reset,
+
     /// Inicializar el kernel con scheduler específico
     Init {
         #[arg(short, long, default_value = "rr")]
@@ -82,12 +86,14 @@ enum Commands {
 
     /// Simular acceso a memoria con FIFO
     MemFifo {
+        #[arg(long)]
         pid: u32,
         pages: Vec<usize>, // Lista de páginas a acceder
     },
 
     /// Simular acceso a memoria con LRU
     MemLru {
+        #[arg(long)]
         pid: u32,
         pages: Vec<usize>,
     },
@@ -139,187 +145,210 @@ enum Commands {
         #[arg(short, long, default_value = "199")]
         max: usize,
         
+        #[arg(long, value_delimiter = ' ', num_args = 1..)]
         cylinders: Vec<usize>,
     },
+}
+
+const KERNEL_STATE_FILE: &str = "kernel_state.json";
+
+/// Carga el estado del kernel desde un archivo JSON.
+fn load_kernel() -> Result<Option<KernelState>> {
+    if let Ok(data) = fs::read_to_string(KERNEL_STATE_FILE) {
+        // Deserializa el estado
+        let mut kernel: KernelState = serde_json::from_str(&data)?;
+        
+        // 1. Reconstruye el scheduler, que no se guarda directamente
+        let scheduler_type = kernel.scheduler_type.clone();
+        kernel.scheduler = KernelState::create_scheduler(scheduler_type);
+
+        // 2. Repuebla el scheduler con los procesos que están en estado 'Ready'
+        for process in kernel.get_ready_processes() {
+            kernel.scheduler.push(process);
+        }
+
+        Ok(Some(kernel))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Guarda el estado del kernel en un archivo JSON.
+fn save_kernel(kernel: &KernelState) -> Result<()> {
+    let data = serde_json::to_string_pretty(kernel)?;
+    fs::write(KERNEL_STATE_FILE, data)?;
+    Ok(())
 }
 
 fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
 
-    // Estado global (en aplicación real, esto se persistiría entre comandos)
-    static mut KERNEL: Option<KernelState> = None;
-
     match cli.command {
+        Commands::Reset => {
+            if fs::remove_file(KERNEL_STATE_FILE).is_ok() {
+                println!("✅ Estado del kernel reseteado. Puedes iniciar uno nuevo con `init`.");
+            } else {
+                println!("ℹ️ No había un estado del kernel para resetear.");
+            }
+            return Ok(()); // Salir después de resetear
+        }
+
         Commands::Init { scheduler, quantum, frames } => {
             let sched_type = match scheduler.as_str() {
                 "rr" => SchedulerType::RoundRobin(quantum),
                 "sjf" => SchedulerType::SJF,
                 "fifo" => SchedulerType::FIFO,
                 _ => {
-                    println!("❌ Scheduler inválido. Usa: rr, sjf, o fifo");
+                    eprintln!("❌ Scheduler inválido. Usa: rr, sjf, o fifo");
                     return Ok(());
                 }
             };
-
-            unsafe {
-                KERNEL = Some(KernelState::new(sched_type, frames));
-                println!("✅ Kernel inicializado:");
-                println!("   Scheduler: {}", scheduler);
-                if scheduler == "rr" {
-                    println!("   Quantum: {}", quantum);
-                }
-                println!("   Marcos de memoria: {}", frames);
+            let kernel = KernelState::new(sched_type, frames);
+            save_kernel(&kernel)?;
+            println!("✅ Kernel inicializado:");
+            println!("   Scheduler: {}", scheduler);
+            if scheduler == "rr" {
+                println!("   Quantum: {}", quantum);
             }
+            println!("   Marcos de memoria: {}", frames);
         }
 
         Commands::New { burst, mem } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    let pid = kernel.create_process(burst, mem);
-                    println!("✅ Proceso {} creado (burst={}, mem={})", pid, burst, mem);
-                } else {
-                    println!("❌ Kernel no inicializado. Ejecuta: kernel-sim init");
-                }
+            if let Some(mut kernel) = load_kernel()? {
+                let pid = kernel.create_process(burst, mem);
+                println!("✅ Proceso {} creado (burst={}, mem={})", pid, burst, mem);
+                save_kernel(&kernel)?;
+            } else {
+                eprintln!("❌ Kernel no inicializado. Ejecuta: kernel-sim init");
             }
         }
 
         Commands::Ps => {
-            unsafe {
-                if let Some(ref kernel) = KERNEL {
-                    kernel.list_processes();
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(kernel) = load_kernel()? {
+                kernel.list_processes();
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Tick { steps } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    kernel.tick(steps);
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(mut kernel) = load_kernel()? {
+                kernel.tick(steps);
+                save_kernel(&kernel)?;
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Kill { pid } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    match kernel.kill_process(pid) {
-                        Ok(_) => println!("✅ Proceso {} terminado", pid),
-                        Err(e) => println!("❌ Error: {}", e),
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.kill_process(pid) {
+                    Ok(_) => {
+                        println!("✅ Proceso {} terminado", pid);
+                        save_kernel(&kernel)?;
                     }
-                } else {
-                    println!("❌ Kernel no inicializado");
+                    Err(e) => eprintln!("❌ Error: {}", e),
                 }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Run { steps } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    kernel.run(steps);
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(mut kernel) = load_kernel()? {
+                kernel.run(steps);
+                save_kernel(&kernel)?;
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Status => {
-            unsafe {
-                if let Some(ref kernel) = KERNEL {
-                    kernel.status();
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(kernel) = load_kernel()? {
+                kernel.status();
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Metrics => {
-            unsafe {
-                if let Some(ref kernel) = KERNEL {
-                    kernel.compute_metrics();
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(kernel) = load_kernel()? {
+                kernel.compute_metrics();
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Produce { item, pid } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    match kernel.produce(item.clone(), pid) {
-                        Ok(_) => println!("✅ Item '{}' producido por proceso {}", item, pid),
-                        Err(e) => println!("⚠️  {}", e),
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.produce(item.clone(), pid) {
+                    Ok(_) => {
+                        println!("✅ Item '{}' producido por proceso {}", item, pid);
+                        save_kernel(&kernel)?;
                     }
-                } else {
-                    println!("❌ Kernel no inicializado");
+                    Err(e) => eprintln!("⚠️  {}", e),
                 }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::Consume { pid } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    match kernel.consume(pid) {
-                        Ok(item) => println!("✅ Proceso {} consumió: '{}'", pid, item),
-                        Err(e) => println!("⚠️  {}", e),
+            if let Some(mut kernel) = load_kernel()? {
+                match kernel.consume(pid) {
+                    Ok(item) => {
+                        println!("✅ Proceso {} consumió: '{}'", pid, item);
+                        save_kernel(&kernel)?;
                     }
-                } else {
-                    println!("❌ Kernel no inicializado");
+                    Err(e) => eprintln!("⚠️  {}", e),
                 }
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::BufferStat => {
-            unsafe {
-                if let Some(ref kernel) = KERNEL {
-                    kernel.buffer_status();
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(kernel) = load_kernel()? {
+                kernel.buffer_status();
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::MemFifo { pid, pages } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    println!("\n🔍 Simulando accesos con FIFO para proceso {}", pid);
-                    for page in pages {
-                        let _ = kernel.access_memory_fifo(pid, page);
-                    }
-                    kernel.display_memory();
-                    let stats = kernel_sim::modules::mem::paging::FrameManager::new(8).stats();
-                    println!("\nEstadísticas guardadas.");
-                } else {
-                    println!("❌ Kernel no inicializado");
+            if let Some(mut kernel) = load_kernel()? {
+                println!("\n🔍 Simulando accesos con FIFO para proceso {}", pid);
+                for page in pages {
+                    let _ = kernel.access_memory_fifo(pid, page);
                 }
+                kernel.display_memory();
+                kernel.status(); // Mostrar estado general, que incluye métricas de memoria
+                save_kernel(&kernel)?;
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::MemLru { pid, pages } => {
-            unsafe {
-                if let Some(ref mut kernel) = KERNEL {
-                    println!("\n🔍 Simulando accesos con LRU para proceso {}", pid);
-                    for page in pages {
-                        let _ = kernel.access_memory_lru(pid, page);
-                    }
-                    kernel.display_memory();
-                } else {
-                    println!("❌ Kernel no inicializado");
+            if let Some(mut kernel) = load_kernel()? {
+                println!("\n🔍 Simulando accesos con LRU para proceso {}", pid);
+                for page in pages {
+                    let _ = kernel.access_memory_lru(pid, page);
                 }
+                kernel.display_memory();
+                kernel.status(); // Mostrar estado general, que incluye métricas de memoria
+                save_kernel(&kernel)?;
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
         Commands::MemDisplay => {
-            unsafe {
-                if let Some(ref kernel) = KERNEL {
-                    kernel.display_memory();
-                } else {
-                    println!("❌ Kernel no inicializado");
-                }
+            if let Some(kernel) = load_kernel()? {
+                kernel.display_memory();
+            } else {
+                eprintln!("❌ Kernel no inicializado");
             }
         }
 
@@ -365,7 +394,7 @@ fn main() -> Result<()> {
 
         Commands::DiskScan { start, max, cylinders } => {
             println!("\n💾 Simulación de Disco - SCAN");
-            let mut scan = ScanScheduler::new(max, ScanDirection::Up);
+            let mut scan = ScanScheduler::new(ScanDirection::Up);
             
             for (idx, cyl) in cylinders.iter().enumerate() {
                 scan.add_request(DiskRequest {
@@ -382,7 +411,7 @@ fn main() -> Result<()> {
 
         Commands::DiskCompare { start, max, cylinders } => {
             println!("\n💾 COMPARATIVA DE ALGORITMOS DE DISCO");
-            println!("═══════════════════════════════════════\n");
+            println!("═══════════════════════════════════════");
 
             // FCFS
             let mut fcfs = FcfsScheduler::new();
@@ -411,7 +440,7 @@ fn main() -> Result<()> {
             let sstf_movement = sim_sstf.total_movement();
 
             // SCAN
-            let mut scan = ScanScheduler::new(max, ScanDirection::Up);
+            let mut scan = ScanScheduler::new(ScanDirection::Up);
             for (idx, cyl) in cylinders.iter().enumerate() {
                 scan.add_request(DiskRequest {
                     pid: idx as u32 + 1,
@@ -421,6 +450,7 @@ fn main() -> Result<()> {
             }
             let mut sim_scan = DiskSimulator::new(start);
             sim_scan.process_all(&mut scan);
+            sim_scan.visualize(max);
             let scan_movement = sim_scan.total_movement();
 
             // Resumen comparativo

@@ -1,4 +1,4 @@
-use crate::process::{Process, ProcessState};
+use crate::process::{Process};
 use std::collections::VecDeque;
 
 /// Trait para schedulers (permite intercambiar implementación)

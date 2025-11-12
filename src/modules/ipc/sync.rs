@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
+use serde::{Serialize, Deserialize};
 
 /// Semáforo básico (contador)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Semaphore {
     count: i32,
     waiting_queue: VecDeque<u32>, // PIDs esperando
@@ -55,7 +56,7 @@ impl Semaphore {
 }
 
 /// Buffer compartido para productor-consumidor
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ProducerConsumerBuffer {
     buffer: VecDeque<String>,
     capacity: usize,

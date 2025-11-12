@@ -1,19 +1,23 @@
 use anyhow::Result;
-use log::{info, warn};
+use log::info;
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
 use crate::process::{Process, ProcessState};
 use crate::scheduler::{Scheduler, RoundRobinScheduler, SjfScheduler, FifoScheduler};
 use crate::modules::mem::paging::FrameManager;
 use crate::modules::ipc::sync::ProducerConsumerBuffer;
-use crate::modules::ipc::philosophers::DiningPhilosophers;
-use crate::modules::disk::scheduler::{DiskScheduler, FcfsScheduler, SstfScheduler, ScanScheduler, ScanDirection, DiskRequest, DiskSimulator};
 
 /// Estado global del kernel
+#[derive(Serialize, Deserialize)]
 pub struct KernelState {
     processes: HashMap<u32, Process>,
     next_pid: u32,
-    scheduler: Box<dyn Scheduler>,
+    
+    #[serde(skip, default = "default_scheduler")]
+    pub scheduler: Box<dyn Scheduler>,
+    pub scheduler_type: SchedulerType,
+
     current_process: Option<u32>,
     memory_manager: FrameManager,
     producer_consumer: ProducerConsumerBuffer,
@@ -21,23 +25,31 @@ pub struct KernelState {
     finished_processes: Vec<Process>,
 }
 
+/// Función para satisfacer el `default` de serde para el scheduler.
+fn default_scheduler() -> Box<dyn Scheduler> {
+    Box::new(FifoScheduler::new()) // Un valor por defecto temporal
+}
+
 impl KernelState {
     pub fn new(scheduler_type: SchedulerType, num_frames: usize) -> Self {
-        let scheduler: Box<dyn Scheduler> = match scheduler_type {
-            SchedulerType::RoundRobin(quantum) => Box::new(RoundRobinScheduler::new(quantum)),
-            SchedulerType::SJF => Box::new(SjfScheduler::new()),
-            SchedulerType::FIFO => Box::new(FifoScheduler::new()),
-        };
-
         Self {
             processes: HashMap::new(),
             next_pid: 1,
-            scheduler,
+            scheduler: Self::create_scheduler(scheduler_type.clone()),
+            scheduler_type,
             current_process: None,
             memory_manager: FrameManager::new(num_frames),
             producer_consumer: ProducerConsumerBuffer::new(5),
             current_time: 0,
             finished_processes: Vec::new(),
+        }
+    }
+
+    pub fn create_scheduler(scheduler_type: SchedulerType) -> Box<dyn Scheduler> {
+        match scheduler_type {
+            SchedulerType::RoundRobin(quantum) => Box::new(RoundRobinScheduler::new(quantum)),
+            SchedulerType::SJF => Box::new(SjfScheduler::new()),
+            SchedulerType::FIFO => Box::new(FifoScheduler::new()),
         }
     }
 
@@ -59,6 +71,16 @@ impl KernelState {
 
         pid
     }
+
+    /// Devuelve una lista de procesos en estado Ready.
+    pub fn get_ready_processes(&self) -> Vec<Process> {
+        self.processes
+            .values()
+            .filter(|p| p.state == ProcessState::Ready)
+            .cloned()
+            .collect()
+    }
+
 
     /// Listar procesos
     pub fn list_processes(&self) {
@@ -140,12 +162,15 @@ impl KernelState {
                 if process.remaining_burst == 0 {
                     process.mark_finished(self.current_time);
                     println!("✅ Proceso {} TERMINADO", process.pid);
-                    self.finished_processes.push(process.clone());
+                    // Eliminar de la lista de procesos activos y añadir la versión actualizada a los finalizados
+                    if self.processes.remove(&process.pid).is_some() {
+                        self.finished_processes.push(process);
+                    }
                 } else {
                     // Volver a la cola
                     process.state = ProcessState::Ready;
+                    self.processes.insert(process.pid, process.clone());
                     self.scheduler.push(process.clone());
-                    self.processes.insert(process.pid, process);
                 }
             } else {
                 println!("  (CPU inactiva - no hay procesos)");
@@ -286,6 +311,7 @@ impl KernelState {
 }
 
 /// Tipos de scheduler disponibles
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum SchedulerType {
     RoundRobin(u64),
     SJF,
