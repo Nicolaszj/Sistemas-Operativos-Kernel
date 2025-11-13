@@ -1,7 +1,7 @@
 # 🚀 Kernel Simulation - Sistemas Operativos
 
 **Proyecto:** Simulación completa de núcleo de sistema operativo  
-**Estudiante:** Nicolaszj  
+**Estudiantes:** Nicolas Zapata, Andru Quiroz y Luis Estiven Moreno.
 **Lenguaje:** Rust 2021  
 **Estado:** ✅ **CÓDIGO COMPLETO - 100% IMPLEMENTADO**
 
@@ -203,7 +203,7 @@ SistemasOp/
 ## 📄 Licencia
 
 Proyecto académico - Universidad  
-Estudiante: Nicolaszj  
+Estudiantes: Nicolas Zapata, Andru Quiroz y Luis Estiven Moreno.
 Curso: Sistemas Operativos  
 Fecha: Noviembre 2025
       - ipc/
